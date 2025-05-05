@@ -114,7 +114,7 @@ always @* begin
     reg_rd_en_next = s_axil_arvalid_next && !s_axil_rvalid_next;
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     timeout_count_reg <= timeout_count_next;
 
     s_axil_araddr_reg <= s_axil_araddr_next;

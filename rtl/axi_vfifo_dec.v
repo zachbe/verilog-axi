@@ -282,7 +282,7 @@ for (n = 0; n < SEG_CNT; n = n + 1) begin : ctrl_fifo_seg
     assign ctrl_fifo_seg_half_full[n] = seg_half_full_reg;
     assign ctrl_fifo_seg_empty[n] = seg_empty;
 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         seg_rd_valid_reg <= seg_rd_valid_reg && !ctrl_fifo_rd_en[n];
 
         seg_half_full_reg <= $unsigned(seg_wr_ptr_reg - seg_rd_ptr_reg) >= 2**(CTRL_FIFO_ADDR_WIDTH-1);
@@ -605,7 +605,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     frame_reg <= frame_next;
     last_reg <= last_next;
     extra_cycle_reg <= extra_cycle_next;
@@ -682,7 +682,7 @@ assign m_axis_tid    = AXIS_ID_ENABLE   ? m_axis_tid_reg   : {AXIS_ID_WIDTH{1'b0
 assign m_axis_tdest  = AXIS_DEST_ENABLE ? m_axis_tdest_reg : {AXIS_DEST_WIDTH{1'b0}};
 assign m_axis_tuser  = AXIS_USER_ENABLE ? m_axis_tuser_reg : {AXIS_USER_WIDTH{1'b0}};
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     m_axis_tvalid_reg <= m_axis_tvalid_reg && !m_axis_tready;
 
     out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);

@@ -126,7 +126,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     s_axil_awready_reg <= s_axil_awready_next;
     s_axil_wready_reg <= s_axil_wready_next;
     s_axil_bvalid_reg <= s_axil_bvalid_next;
@@ -158,7 +158,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     s_axil_arready_reg <= s_axil_arready_next;
     s_axil_rvalid_reg <= s_axil_rvalid_next;
 

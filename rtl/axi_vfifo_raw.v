@@ -334,7 +334,7 @@ always @(posedge clk or posedge rst_req_int) begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     rst_sync_2_reg <= rst_sync_1_reg;
     rst_sync_3_reg <= rst_sync_2_reg;
 end
@@ -364,7 +364,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     fifo_reset_reg <= fifo_reset_next;
     fifo_enable_reg <= fifo_enable_next;
     fifo_base_addr_reg <= fifo_base_addr_next;

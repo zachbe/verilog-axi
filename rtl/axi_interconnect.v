@@ -759,7 +759,7 @@ always @* begin
     endcase
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         state_reg <= STATE_IDLE;
 
@@ -861,7 +861,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         s_axi_rvalid_reg <= 1'b0;
         s_axi_rready_int_reg <= 1'b0;
@@ -951,7 +951,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         m_axi_wvalid_reg <= 1'b0;
         m_axi_wready_int_reg <= 1'b0;

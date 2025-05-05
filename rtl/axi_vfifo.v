@@ -198,7 +198,7 @@ reg [LEN_WIDTH-1:0] cfg_fifo_size_mask_reg = 0;
 reg cfg_enable_reg = 0;
 reg cfg_reset_reg = 0;
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (cfg_enable_reg) begin
         if (cfg_reset) begin
             cfg_enable_reg <= 1'b0;
@@ -270,7 +270,7 @@ always @(posedge m_axis_clk) begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     sts_sync_count_reg <= sts_sync_count_reg + 1;
 
     if (sts_sync_count_reg == 0) begin

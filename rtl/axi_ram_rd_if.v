@@ -232,7 +232,7 @@ always @* begin
     endcase
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     state_reg <= state_next;
 
     read_id_reg <= read_id_next;

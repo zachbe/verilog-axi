@@ -549,7 +549,7 @@ always @* begin
     endcase
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     axi_state_reg <= axi_state_next;
     axis_state_reg <= axis_state_next;
 
@@ -654,7 +654,7 @@ assign m_axis_read_data_tid    = AXIS_ID_ENABLE   ? m_axis_read_data_tid_reg   :
 assign m_axis_read_data_tdest  = AXIS_DEST_ENABLE ? m_axis_read_data_tdest_reg : {AXIS_DEST_WIDTH{1'b0}};
 assign m_axis_read_data_tuser  = AXIS_USER_ENABLE ? m_axis_read_data_tuser_reg : {AXIS_USER_WIDTH{1'b0}};
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     m_axis_read_data_tvalid_reg <= m_axis_read_data_tvalid_reg && !m_axis_read_data_tready;
 
     out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);

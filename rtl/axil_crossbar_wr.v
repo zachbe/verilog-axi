@@ -195,7 +195,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (fifo_wr_en) begin
                 fifo_select[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= fifo_wr_select;
                 fifo_decerr[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= fifo_wr_decerr;
@@ -306,7 +306,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (rst) begin
                 w_select_valid_reg <= 1'b0;
             end else begin
@@ -402,7 +402,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (fifo_wr_en) begin
                 fifo_select[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= fifo_wr_select;
                 fifo_wr_ptr_reg <= fifo_wr_ptr_reg + 1;
@@ -484,7 +484,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (rst) begin
                 w_select_valid_reg <= 1'b0;
                 w_select_new_reg <= 1'b1;

@@ -248,7 +248,7 @@ always @* begin
     endcase
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     write_state_reg <= write_state_next;
 
     write_id_reg <= write_id_next;
@@ -334,7 +334,7 @@ always @* begin
     endcase
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     read_state_reg <= read_state_next;
 
     read_id_reg <= read_id_next;

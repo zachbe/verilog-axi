@@ -246,7 +246,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     state_reg <= state_next;
 
     current_segment_reg <= current_segment_next;

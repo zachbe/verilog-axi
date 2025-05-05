@@ -639,7 +639,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     read_state_reg <= read_state_next;
     axi_state_reg <= axi_state_next;
 
@@ -766,7 +766,7 @@ assign m_axi_wstrb  = m_axi_wstrb_reg;
 assign m_axi_wvalid = m_axi_wvalid_reg;
 assign m_axi_wlast  = m_axi_wlast_reg;
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     m_axi_wvalid_reg <= m_axi_wvalid_reg && !m_axi_wready;
 
     out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);

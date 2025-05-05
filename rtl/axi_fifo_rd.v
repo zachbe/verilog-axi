@@ -265,7 +265,7 @@ if (FIFO_DELAY) begin
         end
     end
 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         state_reg <= state_next;
         count_reg <= count_next;
 
@@ -333,7 +333,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     wr_ptr_reg <= wr_ptr_next;
     wr_addr_reg <= wr_ptr_next;
 
@@ -368,7 +368,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     rd_ptr_reg <= rd_ptr_next;
     rd_addr_reg <= rd_ptr_next;
 
@@ -396,7 +396,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     s_axi_rvalid_reg <= s_axi_rvalid_next;
 
     if (store_output) begin

@@ -306,7 +306,7 @@ for (n = 0; n < SEG_CNT; n = n + 1) begin : write_fifo_seg
         end
     end
 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         if (!write_fifo_empty && (!input_valid_int_reg || input_read_en)) begin
             seg_rd_data_reg <= seg_mem_data[write_fifo_rd_ptr_reg[WRITE_FIFO_ADDR_WIDTH-1:0]];
         end
@@ -332,7 +332,7 @@ always @(posedge input_clk) begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     write_fifo_wr_ptr_gray_sync_1_reg <= write_fifo_wr_ptr_gray;
     write_fifo_wr_ptr_gray_sync_2_reg <= write_fifo_wr_ptr_gray_sync_1_reg;
 
@@ -348,7 +348,7 @@ always @(posedge clk) begin
 end
 
 // read logic
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     write_fifo_occupancy_reg <= write_fifo_wr_ptr_sync_reg - write_fifo_rd_ptr_reg + input_valid_int_reg;
 
     if (input_read_en) begin
@@ -520,7 +520,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     wr_start_ptr_reg <= wr_start_ptr_next;
     wr_start_ptr_blk_adj_reg <= wr_start_ptr_blk_adj_next;
     wr_finish_ptr_reg <= wr_finish_ptr_next;

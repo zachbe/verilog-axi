@@ -244,7 +244,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         m_axis_desc_valid_reg <= 1'b0;
         m_axis_desc_ready_int_reg <= 1'b0;
@@ -299,7 +299,7 @@ assign m_axis_desc_status_user  = AXIS_USER_ENABLE ? {PORTS{m_axis_desc_status_u
 assign m_axis_desc_status_error  = {PORTS{m_axis_desc_status_error_reg}};
 assign m_axis_desc_status_valid = m_axis_desc_status_valid_reg;
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         m_axis_desc_status_valid_reg <= {PORTS{1'b0}};
     end else begin

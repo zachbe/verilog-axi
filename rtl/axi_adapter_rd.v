@@ -549,7 +549,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     state_reg <= state_next;
 
     id_reg <= id_next;
@@ -646,7 +646,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         s_axi_rvalid_reg <= 1'b0;
         s_axi_rready_int_reg <= 1'b0;

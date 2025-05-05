@@ -196,7 +196,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         s_axi_arready_reg <= 1'b0;
         m_axi_arvalid_reg <= 1'b0;
@@ -303,7 +303,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         s_axi_arready_reg <= 1'b0;
         m_axi_arvalid_reg <= 1'b0;
@@ -414,7 +414,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         m_axi_rready_reg <= 1'b0;
         s_axi_rvalid_reg <= 1'b0;
@@ -491,7 +491,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         m_axi_rready_reg <= 1'b0;
         s_axi_rvalid_reg <= 1'b0;

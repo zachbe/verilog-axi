@@ -212,13 +212,13 @@ for (n = 0; n < SEG_CNT_INT; n = n + 1) begin : seg_ram
 
     assign seg_mem_rd_data[n*SEG_WIDTH +: SEG_WIDTH] = rd_data_reg;
 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         if (wr_en) begin
             seg_mem_data[wr_addr] <= wr_data;
         end
     end
 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         if (rd_en) begin
             rd_data_reg <= seg_mem_data[rd_addr];
         end
@@ -243,7 +243,7 @@ assign hdr_mem_rd_len = hdr_mem_rd_len_reg;
 assign hdr_mem_rd_last = hdr_mem_rd_last_reg;
 assign hdr_mem_rd_meta = hdr_mem_rd_meta_reg;
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (hdr_mem_wr_en) begin
         hdr_mem_len[hdr_mem_wr_addr] <= hdr_mem_wr_len;
         hdr_mem_last[hdr_mem_wr_addr] <= hdr_mem_wr_last;
@@ -251,7 +251,7 @@ always @(posedge clk) begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (hdr_mem_rd_en) begin
         hdr_mem_rd_len_reg <= hdr_mem_len[hdr_mem_rd_addr_reg];
         hdr_mem_rd_last_reg <= hdr_mem_last[hdr_mem_rd_addr_reg];
@@ -260,7 +260,7 @@ always @(posedge clk) begin
 end
 
 // limits
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     input_fifo_full_reg <= $unsigned(input_fifo_wr_ptr_reg - input_fifo_rd_ptr_reg) >= (2**INPUT_FIFO_ADDR_WIDTH*SEG_CNT_INT)-SEG_CNT_INT*2;
     input_fifo_half_full_reg <= $unsigned(input_fifo_wr_ptr_reg - input_fifo_rd_ptr_reg) >= (2**INPUT_FIFO_ADDR_WIDTH*SEG_CNT_INT)/2;
     hdr_fifo_full_reg <= $unsigned(hdr_fifo_wr_ptr_reg - hdr_fifo_rd_ptr_reg) >= 2**HDR_FIFO_ADDR_WIDTH-4;
@@ -481,7 +481,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     input_fifo_wr_ptr_reg <= input_fifo_wr_ptr_next;
     hdr_fifo_wr_ptr_reg <= hdr_fifo_wr_ptr_next;
 
@@ -726,7 +726,7 @@ end
 
 integer i;
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     input_fifo_rd_ptr_reg <= input_fifo_rd_ptr_next;
     input_fifo_count_reg <= input_fifo_wr_ptr_next - input_fifo_rd_ptr_next;
     input_fifo_empty_reg <= input_fifo_wr_ptr_next == input_fifo_rd_ptr_next;

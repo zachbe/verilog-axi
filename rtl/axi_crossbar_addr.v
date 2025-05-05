@@ -292,7 +292,7 @@ generate
         assign thread_trans_start[n] = (thread_match[n] || (!thread_active[n] && !thread_match && !(thread_trans_start & ({S_INT_THREADS{1'b1}} >> (S_INT_THREADS-n))))) && trans_start;
         assign thread_trans_complete[n] = thread_cpl_match[n] && trans_complete;
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (rst) begin
                 thread_count_reg[n] <= 0;
             end else begin
@@ -385,7 +385,7 @@ always @* begin
     trans_complete = s_cpl_valid;
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         state_reg <= STATE_IDLE;
         s_axi_aready_reg <= 1'b0;

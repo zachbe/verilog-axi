@@ -275,7 +275,7 @@ for (n = 0; n < SEG_CNT; n = n + 1) begin : read_fifo_seg
         assign read_fifo_rd_ptr_gray = seg_rd_ptr_gray_reg;
     end
 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         if (!read_fifo_full && m_axi_rready && m_axi_rvalid) begin
             seg_mem_data[read_fifo_wr_ptr_reg[READ_FIFO_ADDR_WIDTH-1:0]] <= m_axi_rdata[n*SEG_WIDTH +: SEG_WIDTH];
         end
@@ -306,7 +306,7 @@ end
 endgenerate
 
 // write logic
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     read_fifo_occupancy_reg <= read_fifo_wr_ptr_reg - read_fifo_rd_ptr_sync_reg;
     read_fifo_half_full_reg <= $unsigned(read_fifo_wr_ptr_reg - read_fifo_rd_ptr_sync_reg) >= 2**(READ_FIFO_ADDR_WIDTH-1);
 
@@ -333,7 +333,7 @@ always @(posedge clk) begin
 end
 
 // pointer synchronization
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     read_fifo_rd_ptr_gray_sync_1_reg <= read_fifo_rd_ptr_gray;
     read_fifo_rd_ptr_gray_sync_2_reg <= read_fifo_rd_ptr_gray_sync_1_reg;
 
@@ -348,7 +348,7 @@ always @(posedge clk) begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     read_fifo_ctrl_rd_ptr_gray_sync_1_reg <= read_fifo_ctrl_rd_ptr_gray;
     read_fifo_ctrl_rd_ptr_gray_sync_2_reg <= read_fifo_ctrl_rd_ptr_gray_sync_1_reg;
 
@@ -399,7 +399,7 @@ if (CTRL_OUT_EN) begin
             assign read_fifo_ctrl_rd_ptr_gray = seg_rd_ptr_gray_reg;
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (!read_fifo_full && m_axi_rready && m_axi_rvalid) begin
                 seg_mem_data[read_fifo_wr_ptr_reg[READ_FIFO_ADDR_WIDTH-1:0]] <= m_axi_rdata[n*SEG_WIDTH +: SEG_WIDTH];
             end
@@ -557,7 +557,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     rd_start_ptr_reg <= rd_start_ptr_next;
     rd_finish_ptr_reg <= rd_finish_ptr_next;
 

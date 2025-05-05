@@ -256,7 +256,7 @@ always @* begin
     endcase
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     state_reg <= state_next;
 
     write_id_reg <= write_id_next;

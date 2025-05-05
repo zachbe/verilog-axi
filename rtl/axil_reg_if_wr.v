@@ -130,7 +130,7 @@ always @* begin
     reg_wr_en_next = s_axil_awvalid_next && s_axil_wvalid_next && !s_axil_bvalid_next;
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     timeout_count_reg <= timeout_count_next;
 
     s_axil_awaddr_reg <= s_axil_awaddr_next;

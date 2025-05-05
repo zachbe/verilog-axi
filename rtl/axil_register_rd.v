@@ -135,7 +135,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         s_axil_arready_reg <= 1'b0;
         m_axil_arvalid_reg <= 1'b0;
@@ -197,7 +197,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         s_axil_arready_reg <= 1'b0;
         m_axil_arvalid_reg <= 1'b0;
@@ -281,7 +281,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         m_axil_rready_reg <= 1'b0;
         s_axil_rvalid_reg <= 1'b0;
@@ -343,7 +343,7 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk or posedge rst) begin
     if (rst) begin
         m_axil_rready_reg <= 1'b0;
         s_axil_rvalid_reg <= 1'b0;

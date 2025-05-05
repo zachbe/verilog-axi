@@ -325,7 +325,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (rst) begin
                 w_select_valid_reg <= 1'b0;
             end else begin
@@ -361,7 +361,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (rst) begin
                 decerr_m_axi_bvalid_reg <= 1'b0;
             end else begin
@@ -494,7 +494,7 @@ generate
 
         wire trans_limit = trans_count_reg >= M_ISSUE[n*32 +: 32] && !trans_complete;
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (rst) begin
                 trans_count_reg <= 0;
             end else begin
@@ -581,7 +581,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk or posedge rst) begin
             if (rst) begin
                 w_select_valid_reg <= 1'b0;
                 w_select_new_reg <= 1'b1;
