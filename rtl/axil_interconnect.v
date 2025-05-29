@@ -534,6 +534,14 @@ always @(posedge clk or posedge rst) begin
         m_axil_bready_reg <= 0;
         m_axil_arvalid_reg <= 0;
         m_axil_rready_reg <= 0;
+        
+        m_select_reg <= 0;
+        axil_addr_reg <= 0;
+        axil_addr_valid_reg <= 0;
+        axil_prot_reg <= 0;
+        axil_data_reg <= 0;
+        axil_wstrb_reg <= 0;
+        axil_resp_reg <= 0;
     end else begin
         state_reg <= state_next;
 
@@ -548,15 +556,15 @@ always @(posedge clk or posedge rst) begin
         m_axil_bready_reg <= m_axil_bready_next;
         m_axil_arvalid_reg <= m_axil_arvalid_next;
         m_axil_rready_reg <= m_axil_rready_next;
-    end
 
-    m_select_reg <= m_select_next;
-    axil_addr_reg <= axil_addr_next;
-    axil_addr_valid_reg <= axil_addr_valid_next;
-    axil_prot_reg <= axil_prot_next;
-    axil_data_reg <= axil_data_next;
-    axil_wstrb_reg <= axil_wstrb_next;
-    axil_resp_reg <= axil_resp_next;
+        m_select_reg <= m_select_next;
+        axil_addr_reg <= axil_addr_next;
+        axil_addr_valid_reg <= axil_addr_valid_next;
+        axil_prot_reg <= axil_prot_next;
+        axil_data_reg <= axil_data_next;
+        axil_wstrb_reg <= axil_wstrb_next;
+        axil_resp_reg <= axil_resp_next;
+    end
 end
 
 endmodule

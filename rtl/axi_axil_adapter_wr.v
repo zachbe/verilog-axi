@@ -518,44 +518,62 @@ always @* begin
 end
 
 always @(posedge clk or posedge rst) begin
-    state_reg <= state_next;
-
-    id_reg <= id_next;
-    addr_reg <= addr_next;
-    data_reg <= data_next;
-    strb_reg <= strb_next;
-    burst_reg <= burst_next;
-    burst_size_reg <= burst_size_next;
-    master_burst_size_reg <= master_burst_size_next;
-    burst_active_reg <= burst_active_next;
-    convert_burst_reg <= convert_burst_next;
-    first_transfer_reg <= first_transfer_next;
-    last_segment_reg <= last_segment_next;
-
-    s_axi_awready_reg <= s_axi_awready_next;
-    s_axi_wready_reg <= s_axi_wready_next;
-    s_axi_bid_reg <= s_axi_bid_next;
-    s_axi_bresp_reg <= s_axi_bresp_next;
-    s_axi_bvalid_reg <= s_axi_bvalid_next;
-
-    m_axil_awaddr_reg <= m_axil_awaddr_next;
-    m_axil_awprot_reg <= m_axil_awprot_next;
-    m_axil_awvalid_reg <= m_axil_awvalid_next;
-    m_axil_wdata_reg <= m_axil_wdata_next;
-    m_axil_wstrb_reg <= m_axil_wstrb_next;
-    m_axil_wvalid_reg <= m_axil_wvalid_next;
-    m_axil_bready_reg <= m_axil_bready_next;
-
     if (rst) begin
         state_reg <= STATE_IDLE;
 
-        s_axi_awready_reg <= 1'b0;
-        s_axi_wready_reg <= 1'b0;
-        s_axi_bvalid_reg <= 1'b0;
+        id_reg <= 0;
+        addr_reg <= 0;
+        data_reg <= 0;
+        strb_reg <= 0;
+        burst_reg <= 0;
+        burst_size_reg <= 0;
+        master_burst_size_reg <= 0;
+        burst_active_reg <= 0;
+        convert_burst_reg <= 0;
+        first_transfer_reg <= 0;
+        last_segment_reg <= 0;
 
-        m_axil_awvalid_reg <= 1'b0;
-        m_axil_wvalid_reg <= 1'b0;
-        m_axil_bready_reg <= 1'b0;
+        s_axi_awready_reg <= 0;
+        s_axi_wready_reg <= 0;
+        s_axi_bid_reg <= 0;
+        s_axi_bresp_reg <= 0;
+        s_axi_bvalid_reg <= 0;
+
+        m_axil_awaddr_reg <= 0;
+        m_axil_awprot_reg <= 0;
+        m_axil_awvalid_reg <= 0;
+        m_axil_wdata_reg <= 0;
+        m_axil_wstrb_reg <= 0;
+        m_axil_wvalid_reg <= 0;
+        m_axil_bready_reg <= 0;
+    end else begin
+        state_reg <= state_next;
+
+        id_reg <= id_next;
+        addr_reg <= addr_next;
+        data_reg <= data_next;
+        strb_reg <= strb_next;
+        burst_reg <= burst_next;
+        burst_size_reg <= burst_size_next;
+        master_burst_size_reg <= master_burst_size_next;
+        burst_active_reg <= burst_active_next;
+        convert_burst_reg <= convert_burst_next;
+        first_transfer_reg <= first_transfer_next;
+        last_segment_reg <= last_segment_next;
+
+        s_axi_awready_reg <= s_axi_awready_next;
+        s_axi_wready_reg <= s_axi_wready_next;
+        s_axi_bid_reg <= s_axi_bid_next;
+        s_axi_bresp_reg <= s_axi_bresp_next;
+        s_axi_bvalid_reg <= s_axi_bvalid_next;
+
+        m_axil_awaddr_reg <= m_axil_awaddr_next;
+        m_axil_awprot_reg <= m_axil_awprot_next;
+        m_axil_awvalid_reg <= m_axil_awvalid_next;
+        m_axil_wdata_reg <= m_axil_wdata_next;
+        m_axil_wstrb_reg <= m_axil_wstrb_next;
+        m_axil_wvalid_reg <= m_axil_wvalid_next;
+        m_axil_bready_reg <= m_axil_bready_next;
     end
 end
 

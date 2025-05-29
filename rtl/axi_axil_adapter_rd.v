@@ -462,37 +462,52 @@ always @* begin
 end
 
 always @(posedge clk or posedge rst) begin
-    state_reg <= state_next;
-
-    id_reg <= id_next;
-    addr_reg <= addr_next;
-    data_reg <= data_next;
-    resp_reg <= resp_next;
-    burst_reg <= burst_next;
-    burst_size_reg <= burst_size_next;
-    master_burst_reg <= master_burst_next;
-    master_burst_size_reg <= master_burst_size_next;
-
-    s_axi_arready_reg <= s_axi_arready_next;
-    s_axi_rid_reg <= s_axi_rid_next;
-    s_axi_rdata_reg <= s_axi_rdata_next;
-    s_axi_rresp_reg <= s_axi_rresp_next;
-    s_axi_rlast_reg <= s_axi_rlast_next;
-    s_axi_rvalid_reg <= s_axi_rvalid_next;
-
-    m_axil_araddr_reg <= m_axil_araddr_next;
-    m_axil_arprot_reg <= m_axil_arprot_next;
-    m_axil_arvalid_reg <= m_axil_arvalid_next;
-    m_axil_rready_reg <= m_axil_rready_next;
-
     if (rst) begin
         state_reg <= STATE_IDLE;
 
-        s_axi_arready_reg <= 1'b0;
-        s_axi_rvalid_reg <= 1'b0;
+        id_reg <= 0;
+        addr_reg <= 0;
+        data_reg <= 0;
+        resp_reg <= 0;
+        burst_reg <= 0;
+        burst_size_reg <= 0;
+        master_burst_reg <= 0;
+        master_burst_size_reg <= 0;
 
-        m_axil_arvalid_reg <= 1'b0;
-        m_axil_rready_reg <= 1'b0;
+        s_axi_arready_reg <= 0;
+        s_axi_rid_reg <= 0;
+        s_axi_rdata_reg <= 0;
+        s_axi_rresp_reg <= 0;
+        s_axi_rlast_reg <= 0;
+        s_axi_rvalid_reg <= 0;
+
+        m_axil_araddr_reg <= 0;
+        m_axil_arprot_reg <= 0;
+        m_axil_arvalid_reg <= 0;
+        m_axil_rready_reg <= 0;
+    end else begin
+        state_reg <= state_next;
+
+        id_reg <= id_next;
+        addr_reg <= addr_next;
+        data_reg <= data_next;
+        resp_reg <= resp_next;
+        burst_reg <= burst_next;
+        burst_size_reg <= burst_size_next;
+        master_burst_reg <= master_burst_next;
+        master_burst_size_reg <= master_burst_size_next;
+
+        s_axi_arready_reg <= s_axi_arready_next;
+        s_axi_rid_reg <= s_axi_rid_next;
+        s_axi_rdata_reg <= s_axi_rdata_next;
+        s_axi_rresp_reg <= s_axi_rresp_next;
+        s_axi_rlast_reg <= s_axi_rlast_next;
+        s_axi_rvalid_reg <= s_axi_rvalid_next;
+
+        m_axil_araddr_reg <= m_axil_araddr_next;
+        m_axil_arprot_reg <= m_axil_arprot_next;
+        m_axil_arvalid_reg <= m_axil_arvalid_next;
+        m_axil_rready_reg <= m_axil_rready_next;
     end
 end
 
