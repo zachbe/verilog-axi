@@ -193,328 +193,192 @@ assign m_axil_bready = m_axil_bready_reg;
 
 integer i;
 
+// NOTE: This refactor assumes that we only do direct transfers.
+// It was SUCH a pain to do the RD path so I'm just simplifying this.
 always @* begin
-    state_next = STATE_IDLE;
-
-    id_next = id_reg;
-    addr_next = addr_reg;
-    data_next = data_reg;
-    strb_next = strb_reg;
-    burst_next = burst_reg;
-    burst_size_next = burst_size_reg;
-    master_burst_size_next = master_burst_size_reg;
-    burst_active_next = burst_active_reg;
-    convert_burst_next = convert_burst_reg;
-    first_transfer_next = first_transfer_reg;
-    last_segment_next = last_segment_reg;
-
-    s_axi_awready_next = 1'b0;
-    s_axi_wready_next = 1'b0;
-    s_axi_bid_next = s_axi_bid_reg;
-    s_axi_bresp_next = s_axi_bresp_reg;
-    s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
-    m_axil_awaddr_next = m_axil_awaddr_reg;
-    m_axil_awprot_next = m_axil_awprot_reg;
-    m_axil_awvalid_next = m_axil_awvalid_reg && !m_axil_awready;
-    m_axil_wdata_next = m_axil_wdata_reg;
-    m_axil_wstrb_next = m_axil_wstrb_reg;
-    m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
-    m_axil_bready_next = 1'b0;
-
-    if (SEGMENT_COUNT == 1) begin
-        // master output is same width; direct transfer with no splitting/merging
-        case (state_reg)
-            STATE_IDLE: begin
-                // idle state; wait for new burst
-                s_axi_awready_next = !m_axil_awvalid;
-                first_transfer_next = 1'b1;
-
-                if (s_axi_awready && s_axi_awvalid) begin
-                    s_axi_awready_next = 1'b0;
-                    id_next = s_axi_awid;
-                    m_axil_awaddr_next = s_axi_awaddr;
-                    addr_next = s_axi_awaddr;
-                    burst_next = s_axi_awlen;
-                    burst_size_next = s_axi_awsize;
-                    burst_active_next = 1'b1;
-                    m_axil_awprot_next = s_axi_awprot;
-                    m_axil_awvalid_next = 1'b1;
-                    s_axi_wready_next = !m_axil_wvalid;
-                    state_next = STATE_DATA;
-                end else begin
-                    state_next = STATE_IDLE;
-                end
-            end
-            STATE_DATA: begin
-                // data state; transfer write data
+    // master output is same width; direct transfer with no splitting/merging
+    case (state_reg)
+        STATE_IDLE: begin
+            // idle state; wait for new burst
+            first_transfer_next = 1'b1;
+            if (s_axi_awready && s_axi_awvalid) begin
+                state_next = STATE_DATA;
+                id_next = s_axi_awid;
+                addr_next = s_axi_awaddr;
+                data_next = data_reg;
+                strb_next = strb_reg;
+                burst_next = s_axi_awlen;
+                burst_size_next = s_axi_awsize;
+                master_burst_size_next = master_burst_size_reg;
+                burst_active_next = 1'b1;
+                convert_burst_next = convert_burst_reg;
+                last_segment_next = last_segment_reg;
+                s_axi_awready_next = 1'b0;
                 s_axi_wready_next = !m_axil_wvalid;
-
-                if (s_axi_wready && s_axi_wvalid) begin
-                    m_axil_wdata_next = s_axi_wdata;
-                    m_axil_wstrb_next = s_axi_wstrb;
-                    m_axil_wvalid_next = 1'b1;
-                    burst_next = burst_reg - 1;
-                    burst_active_next = burst_reg != 0;
-                    addr_next = addr_reg + (1 << burst_size_reg);
-                    s_axi_wready_next = 1'b0;
-                    m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-                    state_next = STATE_RESP;
-                end else begin
-                    state_next = STATE_DATA;
-                end
-            end
-            STATE_RESP: begin
-                // resp state; transfer write response
-                m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-
-                if (m_axil_bready && m_axil_bvalid) begin
-                    m_axil_bready_next = 1'b0;
-                    s_axi_bid_next = id_reg;
-                    first_transfer_next = 1'b0;
-                    if (first_transfer_reg || m_axil_bresp != 0) begin
-                        s_axi_bresp_next = m_axil_bresp;
-                    end
-                    if (burst_active_reg) begin
-                        // burst on slave interface still active; start new AXI lite write
-                        m_axil_awaddr_next = addr_reg;
-                        m_axil_awvalid_next = 1'b1;
-                        s_axi_wready_next = !m_axil_wvalid;
-                        state_next = STATE_DATA;
-                    end else begin
-                        // burst on slave interface finished; return to idle
-                        s_axi_bvalid_next = 1'b1;
-                        s_axi_awready_next = !m_axil_awvalid;
-                        state_next = STATE_IDLE;
-                    end
-                end else begin
-                    state_next = STATE_RESP;
-                end
-            end
-        endcase
-    end else if (EXPAND) begin
-        // master output is wider; merge writes
-        case (state_reg)
-            STATE_IDLE: begin
-                // idle state; wait for new burst
+                s_axi_bid_next = s_axi_bid_reg;
+                s_axi_bresp_next = s_axi_bresp_reg;
+                s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
+                m_axil_awaddr_next = s_axi_awaddr;
+                m_axil_awprot_next = s_axi_awprot;
+                m_axil_awvalid_next = 1'b1;
+                m_axil_wdata_next = m_axil_wdata_reg;
+                m_axil_wstrb_next = m_axil_wstrb_reg;
+                m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
+                m_axil_bready_next = 1'b0;
+            end else begin
+                state_next = STATE_IDLE;
+                id_next = id_reg;
+                addr_next = addr_reg;
+                data_next = data_reg;
+                strb_next = strb_reg;
+                burst_next = burst_reg;
+                burst_size_next = burst_size_reg;
+                master_burst_size_next = master_burst_size_reg;
+                burst_active_next = burst_active_reg;
+                convert_burst_next = convert_burst_reg;
+                last_segment_next = last_segment_reg;
                 s_axi_awready_next = !m_axil_awvalid;
-
-                first_transfer_next = 1'b1;
-
-                data_next = {DATA_WIDTH{1'b0}};
-                strb_next = {STRB_WIDTH{1'b0}};
-
-                if (s_axi_awready && s_axi_awvalid) begin
-                    s_axi_awready_next = 1'b0;
-                    id_next = s_axi_awid;
-                    m_axil_awaddr_next = s_axi_awaddr;
-                    addr_next = s_axi_awaddr;
-                    burst_next = s_axi_awlen;
-                    burst_size_next = s_axi_awsize;
-                    if (CONVERT_BURST && s_axi_awcache[1] && (CONVERT_NARROW_BURST || s_axi_awsize == AXI_BURST_SIZE)) begin
-                        // merge writes
-                        // require CONVERT_BURST and awcache[1] set
-                        convert_burst_next = 1'b1;
-                        master_burst_size_next = AXIL_BURST_SIZE;
-                        state_next = STATE_DATA_2;
-                    end else begin
-                        // output narrow burst
-                        convert_burst_next = 1'b0;
-                        master_burst_size_next = s_axi_awsize;
-                        state_next = STATE_DATA;
-                    end
-                    m_axil_awprot_next = s_axi_awprot;
-                    m_axil_awvalid_next = 1'b1;
-                    s_axi_wready_next = !m_axil_wvalid;
-                end else begin
-                    state_next = STATE_IDLE;
-                end
-            end
-            STATE_DATA: begin
-                // data state; transfer write data
-                s_axi_wready_next = !m_axil_wvalid || m_axil_wready;
-
-                if (s_axi_wready && s_axi_wvalid) begin
-                    m_axil_wdata_next = {(AXIL_WORD_WIDTH/AXI_WORD_WIDTH){s_axi_wdata}};
-                    m_axil_wstrb_next = s_axi_wstrb << (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_STRB_WIDTH);
-                    m_axil_wvalid_next = 1'b1;
-                    burst_next = burst_reg - 1;
-                    burst_active_next = burst_reg != 0;
-                    addr_next = addr_reg + (1 << burst_size_reg);
-                    s_axi_wready_next = 1'b0;
-                    m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-                    state_next = STATE_RESP;
-                end else begin
-                    state_next = STATE_DATA;
-                end
-            end
-            STATE_DATA_2: begin
-                s_axi_wready_next = !m_axil_wvalid;
-
-                if (s_axi_wready && s_axi_wvalid) begin
-                    if (CONVERT_NARROW_BURST) begin
-                        for (i = 0; i < AXI_WORD_WIDTH; i = i + 1) begin
-                            if (s_axi_wstrb[i]) begin
-                                data_next[addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH+i*AXIL_WORD_SIZE +: AXIL_WORD_SIZE] = s_axi_wdata[i*AXIL_WORD_SIZE +: AXIL_WORD_SIZE];
-                                strb_next[addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1]*SEGMENT_STRB_WIDTH+i] = 1'b1;
-                            end
-                        end
-                    end else begin
-                        data_next[addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH +: SEGMENT_DATA_WIDTH] = s_axi_wdata;
-                        strb_next[addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1]*SEGMENT_STRB_WIDTH +: SEGMENT_STRB_WIDTH] = s_axi_wstrb;
-                    end
-                    m_axil_wdata_next = data_next;
-                    m_axil_wstrb_next = strb_next;
-                    burst_next = burst_reg - 1;
-                    burst_active_next = burst_reg != 0;
-                    addr_next = addr_reg + (1 << burst_size_reg);
-                    if (burst_reg == 0 || addr_next[master_burst_size_reg] != addr_reg[master_burst_size_reg]) begin
-                        data_next = {DATA_WIDTH{1'b0}};
-                        strb_next = {STRB_WIDTH{1'b0}};
-                        m_axil_wvalid_next = 1'b1;
-                        s_axi_wready_next = 1'b0;
-                        m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-                        state_next = STATE_RESP;
-                    end else begin
-                        state_next = STATE_DATA_2;
-                    end
-                end else begin
-                    state_next = STATE_DATA_2;
-                end
-            end
-            STATE_RESP: begin
-                // resp state; transfer write response
-                m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-
-                if (m_axil_bready && m_axil_bvalid) begin
-                    m_axil_bready_next = 1'b0;
-                    s_axi_bid_next = id_reg;
-                    first_transfer_next = 1'b0;
-                    if (first_transfer_reg || m_axil_bresp != 0) begin
-                        s_axi_bresp_next = m_axil_bresp;
-                    end
-                    if (burst_active_reg) begin
-                        // burst on slave interface still active; start new AXI lite write
-                        m_axil_awaddr_next = addr_reg;
-                        m_axil_awvalid_next = 1'b1;
-                        s_axi_wready_next = !m_axil_wvalid || m_axil_wready;
-                        if (convert_burst_reg) begin
-                            state_next = STATE_DATA_2;
-                        end else begin
-                            state_next = STATE_DATA;
-                        end
-                    end else begin
-                        // burst on slave interface finished; return to idle
-                        s_axi_bvalid_next = 1'b1;
-                        s_axi_awready_next = !m_axil_awvalid;
-                        state_next = STATE_IDLE;
-                    end
-                end else begin
-                    state_next = STATE_RESP;
-                end
-            end
-        endcase
-    end else begin
-        // master output is narrower; split writes, and possibly split burst
-        case (state_reg)
-            STATE_IDLE: begin
-                // idle state; wait for new burst
-                s_axi_awready_next = !m_axil_awvalid;
-
-                first_transfer_next = 1'b1;
-
-                if (s_axi_awready && s_axi_awvalid) begin
-                    s_axi_awready_next = 1'b0;
-                    id_next = s_axi_awid;
-                    m_axil_awaddr_next = s_axi_awaddr;
-                    addr_next = s_axi_awaddr;
-                    burst_next = s_axi_awlen;
-                    burst_size_next = s_axi_awsize;
-                    burst_active_next = 1'b1;
-                    if (s_axi_awsize > AXIL_BURST_SIZE) begin
-                        // need to adjust burst size
-                        master_burst_size_next = AXIL_BURST_SIZE;
-                    end else begin
-                        // pass through narrow (enough) burst
-                        master_burst_size_next = s_axi_awsize;
-                    end
-                    m_axil_awprot_next = s_axi_awprot;
-                    m_axil_awvalid_next = 1'b1;
-                    s_axi_wready_next = !m_axil_wvalid;
-                    state_next = STATE_DATA;
-                end else begin
-                    state_next = STATE_IDLE;
-                end
-            end
-            STATE_DATA: begin
-                s_axi_wready_next = !m_axil_wvalid;
-
-                if (s_axi_wready && s_axi_wvalid) begin
-                    data_next = s_axi_wdata;
-                    strb_next = s_axi_wstrb;
-                    m_axil_wdata_next = s_axi_wdata >> (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1] * AXIL_DATA_WIDTH);
-                    m_axil_wstrb_next = s_axi_wstrb >> (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1] * AXIL_STRB_WIDTH);
-                    m_axil_wvalid_next = 1'b1;
-                    burst_next = burst_reg - 1;
-                    burst_active_next = burst_reg != 0;
-                    addr_next = (addr_reg + (1 << master_burst_size_reg)) & ({ADDR_WIDTH{1'b1}} << master_burst_size_reg);
-                    last_segment_next = addr_next[burst_size_reg] != addr_reg[burst_size_reg];
-                    s_axi_wready_next = 1'b0;
-                    m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-                    state_next = STATE_RESP;
-                end else begin
-                    state_next = STATE_DATA;
-                end
-            end
-            STATE_DATA_2: begin
                 s_axi_wready_next = 1'b0;
-
-                if (!m_axil_wvalid || m_axil_wready) begin
-                    m_axil_wdata_next = data_reg >> (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1] * AXIL_DATA_WIDTH);
-                    m_axil_wstrb_next = strb_reg >> (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1] * AXIL_STRB_WIDTH);
-                    m_axil_wvalid_next = 1'b1;
-                    addr_next = (addr_reg + (1 << master_burst_size_reg)) & ({ADDR_WIDTH{1'b1}} << master_burst_size_reg);
-                    last_segment_next = addr_next[burst_size_reg] != addr_reg[burst_size_reg];
-                    s_axi_wready_next = 1'b0;
-                    m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-                    state_next = STATE_RESP;
-                end else begin
-                    state_next = STATE_DATA_2;
-                end
+                s_axi_bid_next = s_axi_bid_reg;
+                s_axi_bresp_next = s_axi_bresp_reg;
+                s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
+                m_axil_awaddr_next = m_axil_awaddr_reg;
+                m_axil_awprot_next = m_axil_awprot_reg;
+                m_axil_awvalid_next = m_axil_awvalid_reg && !m_axil_awready;
+                m_axil_wdata_next = m_axil_wdata_reg;
+                m_axil_wstrb_next = m_axil_wstrb_reg;
+                m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
+                m_axil_bready_next = 1'b0;
             end
-            STATE_RESP: begin
-                // resp state; transfer write response
+        end
+        STATE_DATA: begin
+            // data state; transfer write data
+            if (s_axi_wready && s_axi_wvalid) begin
+                state_next = STATE_RESP;
+                id_next = id_reg;
+                addr_next = addr_reg + (1 << burst_size_reg);
+                data_next = data_reg;
+                strb_next = strb_reg;
+                burst_next = burst_reg - 1;
+                burst_size_next = burst_size_reg;
+                master_burst_size_next = master_burst_size_reg;
+                burst_active_next = burst_reg != 0;
+                convert_burst_next = convert_burst_reg;
+                first_transfer_next = first_transfer_reg;
+                last_segment_next = last_segment_reg;
+                s_axi_awready_next = 1'b0;
+                s_axi_wready_next = 1'b0;
+                s_axi_bid_next = s_axi_bid_reg;
+                s_axi_bresp_next = s_axi_bresp_reg;
+                s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
+                m_axil_awaddr_next = m_axil_awaddr_reg;
+                m_axil_awprot_next = m_axil_awprot_reg;
+                m_axil_awvalid_next = m_axil_awvalid_reg && !m_axil_awready;
+                m_axil_wdata_next = s_axi_wdata;
+                m_axil_wstrb_next = s_axi_wstrb;
+                m_axil_wvalid_next = 1'b1;
                 m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
-
-                if (m_axil_bready && m_axil_bvalid) begin
-                    first_transfer_next = 1'b0;
-                    m_axil_awaddr_next = addr_reg;
-                    m_axil_bready_next = 1'b0;
-                    s_axi_bid_next = id_reg;
-                    if (first_transfer_reg || m_axil_bresp != 0) begin
-                        s_axi_bresp_next = m_axil_bresp;
-                    end
-                    if (burst_active_reg || !last_segment_reg) begin
-                        // burst on slave interface still active; start new burst
-                        m_axil_awvalid_next = 1'b1;
-                        if (last_segment_reg) begin
-                            s_axi_wready_next = !m_axil_wvalid;
-                            state_next = STATE_DATA;
-                        end else begin
-                            s_axi_wready_next = 1'b0;
-                            state_next = STATE_DATA_2;
-                        end
-                    end else begin
-                        // burst on slave interface finished; return to idle
-                        s_axi_bvalid_next = 1'b1;
-                        s_axi_awready_next = !m_axil_awvalid;
-                        state_next = STATE_IDLE;
-                    end
-                end else begin
-                    state_next = STATE_RESP;
-                end
+            end else begin
+                state_next = STATE_DATA;
+                id_next = id_reg;
+                addr_next = addr_reg;
+                data_next = data_reg;
+                strb_next = strb_reg;
+                burst_next = burst_reg;
+                burst_size_next = burst_size_reg;
+                master_burst_size_next = master_burst_size_reg;
+                burst_active_next = burst_active_reg;
+                convert_burst_next = convert_burst_reg;
+                first_transfer_next = first_transfer_reg;
+                last_segment_next = last_segment_reg;
+                s_axi_awready_next = 1'b0;
+                s_axi_wready_next = !m_axil_wvalid;
+                s_axi_bid_next = s_axi_bid_reg;
+                s_axi_bresp_next = s_axi_bresp_reg;
+                s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
+                m_axil_awaddr_next = m_axil_awaddr_reg;
+                m_axil_awprot_next = m_axil_awprot_reg;
+                m_axil_awvalid_next = m_axil_awvalid_reg && !m_axil_awready;
+                m_axil_wdata_next = m_axil_wdata_reg;
+                m_axil_wstrb_next = m_axil_wstrb_reg;
+                m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
+                m_axil_bready_next = 1'b0;
             end
-        endcase
-    end
+        end
+        STATE_RESP: begin
+            // resp state; transfer write response
+            if (m_axil_bready && m_axil_bvalid) begin
+                id_next = id_reg;
+                addr_next = addr_reg;
+                data_next = data_reg;
+                strb_next = strb_reg;
+                burst_next = burst_reg;
+                burst_size_next = burst_size_reg;
+                master_burst_size_next = master_burst_size_reg;
+                burst_active_next = burst_active_reg;
+                convert_burst_next = convert_burst_reg;
+                first_transfer_next = 1'b0;
+                last_segment_next = last_segment_reg;
+                s_axi_bid_next = id_reg;
+                if (first_transfer_reg || m_axil_bresp != 0) begin
+                    s_axi_bresp_next = m_axil_bresp;
+                end else begin
+                    s_axi_bresp_next = s_axi_bresp_reg;
+                end
+                m_axil_bready_next = 1'b0;
+                if (burst_active_reg) begin
+                    // burst on slave interface still active; start new AXI lite write
+                    state_next = STATE_DATA;
+                    s_axi_awready_next = 1'b0;
+                    s_axi_wready_next = !m_axil_wvalid;
+                    s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
+                    m_axil_awaddr_next = addr_reg;
+                    m_axil_awprot_next = m_axil_awprot_reg;
+                    m_axil_awvalid_next = 1'b1;
+                    m_axil_wdata_next = m_axil_wdata_reg;
+                    m_axil_wstrb_next = m_axil_wstrb_reg;
+                    m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
+                end else begin
+                    // burst on slave interface finished; return to idle
+                    state_next = STATE_IDLE;
+                    s_axi_awready_next = !m_axil_awvalid;
+                    s_axi_wready_next = 1'b0;
+                    s_axi_bvalid_next = 1'b1;
+                    m_axil_awaddr_next = m_axil_awaddr_reg;
+                    m_axil_awprot_next = m_axil_awprot_reg;
+                    m_axil_awvalid_next = m_axil_awvalid_reg && !m_axil_awready;
+                    m_axil_wdata_next = m_axil_wdata_reg;
+                    m_axil_wstrb_next = m_axil_wstrb_reg;
+                    m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
+                end
+            end else begin
+                state_next = STATE_RESP;
+                id_next = id_reg;
+                addr_next = addr_reg;
+                data_next = data_reg;
+                strb_next = strb_reg;
+                burst_next = burst_reg;
+                burst_size_next = burst_size_reg;
+                master_burst_size_next = master_burst_size_reg;
+                burst_active_next = burst_active_reg;
+                convert_burst_next = convert_burst_reg;
+                first_transfer_next = first_transfer_reg;
+                last_segment_next = last_segment_reg;
+                s_axi_awready_next = 1'b0;
+                s_axi_wready_next = 1'b0;
+                s_axi_bid_next = s_axi_bid_reg;
+                s_axi_bresp_next = s_axi_bresp_reg;
+                s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
+                m_axil_awaddr_next = m_axil_awaddr_reg;
+                m_axil_awprot_next = m_axil_awprot_reg;
+                m_axil_awvalid_next = m_axil_awvalid_reg && !m_axil_awready;
+                m_axil_wdata_next = m_axil_wdata_reg;
+                m_axil_wstrb_next = m_axil_wstrb_reg;
+                m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
+                m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
+            end
+        end
+    endcase
 end
 
 always @(posedge clk or posedge rst) begin
