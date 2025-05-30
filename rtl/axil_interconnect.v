@@ -353,77 +353,171 @@ for (n = 0; n < S_COUNT; n = n + 1) begin
 end
 endgenerate
 
+// Combinational logic for address decode
+// Generate intermediate match signals for each master/region
+genvar gi, gj;
+wire [M_COUNT-1:0] master_match;
+wire [M_COUNT*M_REGIONS-1:0] region_match;
+
+generate
+    for (gi = 0; gi < M_COUNT; gi = gi + 1) begin : gen_master
+        for (gj = 0; gj < M_REGIONS; gj = gj + 1) begin : gen_region
+            assign region_match[gi*M_REGIONS+gj] = M_ADDR_WIDTH[(gi*M_REGIONS+gj)*32 +: 32] && 
+                                                   (!M_SECURE[gi] || !axil_prot_reg[1]) && 
+                                                   ((read ? M_CONNECT_READ : M_CONNECT_WRITE) & (1 << (s_select+gi*S_COUNT))) && 
+                                                   (axil_addr_reg >> M_ADDR_WIDTH[(gi*M_REGIONS+gj)*32 +: 32]) == 
+                                                   (M_BASE_ADDR_INT[(gi*M_REGIONS+gj)*ADDR_WIDTH +: ADDR_WIDTH] >> M_ADDR_WIDTH[(gi*M_REGIONS+gj)*32 +: 32]);
+        end
+        
+        // OR together all regions for this master
+        assign master_match[gi] = |region_match[gi*M_REGIONS +: M_REGIONS];
+    end
+endgenerate
+
+// Find the highest priority match (lowest index)
+wire match_computed;
+wire [31:0] m_select_computed;
+
+// Priority encoder to find first matching master
+assign match_computed = |master_match;
+
+// Scalable priority encoder using generate
+// Create a chain of conditions where each stage checks if any lower-indexed master matched
+genvar gk;
+wire [M_COUNT-1:0] no_match_below;
+
+generate
+    // First master has no masters below it
+    assign no_match_below[0] = 1'b1;
+    
+    // For each subsequent master, check if all masters below didn't match
+    for (gk = 1; gk < M_COUNT; gk = gk + 1) begin : gen_priority
+        assign no_match_below[gk] = no_match_below[gk-1] & ~master_match[gk-1];
+    end
+endgenerate
+
+// Build the select signal using one-hot to binary encoding
+wire [31:0] m_select_onehot;
+generate
+    for (gk = 0; gk < M_COUNT; gk = gk + 1) begin : gen_select
+        assign m_select_onehot[gk] = master_match[gk] & no_match_below[gk];
+    end
+    
+    // Pad the rest with zeros
+    if (M_COUNT < 32) begin
+        assign m_select_onehot[31:M_COUNT] = 0;
+    end
+endgenerate
+
+// Convert one-hot to binary
+// This creates a priority encoder that works for up to 32 masters
+assign m_select_computed = m_select_onehot[0]  ? 0  :
+                          m_select_onehot[1]  ? 1  :
+                          m_select_onehot[2]  ? 2  :
+                          m_select_onehot[3]  ? 3  :
+                          m_select_onehot[4]  ? 4  :
+                          m_select_onehot[5]  ? 5  :
+                          m_select_onehot[6]  ? 6  :
+                          m_select_onehot[7]  ? 7  :
+                          m_select_onehot[8]  ? 8  :
+                          m_select_onehot[9]  ? 9  :
+                          m_select_onehot[10] ? 10 :
+                          m_select_onehot[11] ? 11 :
+                          m_select_onehot[12] ? 12 :
+                          m_select_onehot[13] ? 13 :
+                          m_select_onehot[14] ? 14 :
+                          m_select_onehot[15] ? 15 :
+                          m_select_onehot[16] ? 16 :
+                          m_select_onehot[17] ? 17 :
+                          m_select_onehot[18] ? 18 :
+                          m_select_onehot[19] ? 19 :
+                          m_select_onehot[20] ? 20 :
+                          m_select_onehot[21] ? 21 :
+                          m_select_onehot[22] ? 22 :
+                          m_select_onehot[23] ? 23 :
+                          m_select_onehot[24] ? 24 :
+                          m_select_onehot[25] ? 25 :
+                          m_select_onehot[26] ? 26 :
+                          m_select_onehot[27] ? 27 :
+                          m_select_onehot[28] ? 28 :
+                          m_select_onehot[29] ? 29 :
+                          m_select_onehot[30] ? 30 : 31;
+
 always @* begin
-    state_next = STATE_IDLE;
-
-    match = 1'b0;
-
-    m_select_next = m_select_reg;
-    axil_addr_next = axil_addr_reg;
-    axil_addr_valid_next = axil_addr_valid_reg;
-    axil_prot_next = axil_prot_reg;
-    axil_data_next = axil_data_reg;
-    axil_wstrb_next = axil_wstrb_reg;
-    axil_resp_next = axil_resp_reg;
-
-    s_axil_awready_next = 0;
-    s_axil_wready_next = 0;
-    s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
-    s_axil_arready_next = 0;
-    s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
-
-    m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
-    m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
-    m_axil_bready_next = 0;
-    m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
-    m_axil_rready_next = 0;
-
+    // Local variables
+    integer i, j;
+    
     case (state_reg)
         STATE_IDLE: begin
-            // idle state; wait for arbitration
-
+            match = 1'b0;
+            m_select_next = m_select_reg;
+            axil_addr_next = axil_addr_reg;
+            axil_addr_valid_next = axil_addr_valid_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_data_next = axil_data_reg;
+            axil_wstrb_next = axil_wstrb_reg;
+            axil_resp_next = axil_resp_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = 0;
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = 0;
+            m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
+            m_axil_rready_next = 0;
+            
             if (grant_valid) begin
-
                 axil_addr_valid_next = 1'b1;
-
                 if (read) begin
                     // reading
                     axil_addr_next = current_s_axil_araddr;
                     axil_prot_next = current_s_axil_arprot;
-                    s_axil_arready_next[s_select] = 1'b1;
-                end else  begin
+                    s_axil_arready_next = (1 << s_select);
+                end else begin
                     // writing
                     axil_addr_next = current_s_axil_awaddr;
                     axil_prot_next = current_s_axil_awprot;
-                    s_axil_awready_next[s_select] = 1'b1;
+                    s_axil_awready_next = (1 << s_select);
                 end
-
                 state_next = STATE_DECODE;
             end else begin
                 state_next = STATE_IDLE;
             end
         end
+        
         STATE_DECODE: begin
             // decode state; determine master interface
-
-            match = 1'b0;
-            for (i = 0; i < M_COUNT; i = i + 1) begin
-                for (j = 0; j < M_REGIONS; j = j + 1) begin
-                    if (M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32] && (!M_SECURE[i] || !axil_prot_reg[1]) && ((read ? M_CONNECT_READ : M_CONNECT_WRITE) & (1 << (s_select+i*S_COUNT))) && (axil_addr_reg >> M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32]) == (M_BASE_ADDR_INT[(i*M_REGIONS+j)*ADDR_WIDTH +: ADDR_WIDTH] >> M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32])) begin
-                        m_select_next = i;
-                        match = 1'b1;
-                    end
-                end
-            end
-
+            // Use the pre-computed match and m_select values
+            match = match_computed;
+            m_select_next = match_computed ? m_select_computed : m_select_reg;
+            
+            axil_addr_next = axil_addr_reg;
+            axil_addr_valid_next = axil_addr_valid_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_data_next = axil_data_reg;
+            axil_wstrb_next = axil_wstrb_reg;
+            axil_resp_next = axil_resp_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = 0;
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = 0;
+            m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
+            m_axil_rready_next = 0;
+            
             if (match) begin
                 if (read) begin
                     // reading
-                    m_axil_rready_next[m_select_next] = 1'b1;
+                    m_axil_rready_next = (1 << m_select_next);
                     state_next = STATE_READ;
                 end else begin
                     // writing
-                    s_axil_wready_next[s_select] = 1'b1;
+                    s_axil_wready_next = (1 << s_select);
                     state_next = STATE_WRITE;
                 end
             end else begin
@@ -432,89 +526,201 @@ always @* begin
                 axil_resp_next = 2'b11;
                 if (read) begin
                     // reading
-                    s_axil_rvalid_next[s_select] = 1'b1;
+                    s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready | (1 << s_select);
                     state_next = STATE_WAIT_IDLE;
                 end else begin
                     // writing
-                    s_axil_wready_next[s_select] = 1'b1;
+                    s_axil_wready_next = (1 << s_select);
                     state_next = STATE_WRITE_DROP;
                 end
             end
         end
+        
         STATE_WRITE: begin
             // write state; store and forward write data
-            s_axil_wready_next[s_select] = 1'b1;
-
+            match = 1'b0;
+            m_select_next = m_select_reg;
+            axil_addr_next = axil_addr_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_resp_next = axil_resp_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = (1 << s_select);
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = 0;
+            m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
+            m_axil_rready_next = 0;
+            
             if (axil_addr_valid_reg) begin
-                m_axil_awvalid_next[m_select_reg] = 1'b1;
+                m_axil_awvalid_next = (m_axil_awvalid_reg & ~m_axil_awready) | (1 << m_select_reg);
+            end else begin
+                m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
             end
             axil_addr_valid_next = 1'b0;
-
+            
             if (current_s_axil_wready && current_s_axil_wvalid) begin
-                s_axil_wready_next[s_select] = 1'b0;
                 axil_data_next = current_s_axil_wdata;
                 axil_wstrb_next = current_s_axil_wstrb;
-                m_axil_wvalid_next[m_select_reg] = 1'b1;
-                m_axil_bready_next[m_select_reg] = 1'b1;
+                s_axil_wready_next = s_axil_wready_next & ~(1 << s_select);
+                m_axil_wvalid_next = (1 << m_select_reg);
+                m_axil_bready_next = (1 << m_select_reg);
                 state_next = STATE_WRITE_RESP;
             end else begin
+                axil_data_next = axil_data_reg;
+                axil_wstrb_next = axil_wstrb_reg;
                 state_next = STATE_WRITE;
             end
         end
+        
         STATE_WRITE_RESP: begin
             // write response state; store and forward write response
-            m_axil_bready_next[m_select_reg] = 1'b1;
-
+            match = 1'b0;
+            m_select_next = m_select_reg;
+            axil_addr_next = axil_addr_reg;
+            axil_addr_valid_next = axil_addr_valid_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_data_next = axil_data_reg;
+            axil_wstrb_next = axil_wstrb_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = 0;
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = (1 << m_select_reg);
+            m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
+            m_axil_rready_next = 0;
+            
             if (current_m_axil_bready && current_m_axil_bvalid) begin
-                m_axil_bready_next[m_select_reg] = 1'b0;
+                m_axil_bready_next = m_axil_bready_next & ~(1 << m_select_reg);
                 axil_resp_next = current_m_axil_bresp;
-                s_axil_bvalid_next[s_select] = 1'b1;
+                s_axil_bvalid_next = s_axil_bvalid_next | (1 << s_select);
                 state_next = STATE_WAIT_IDLE;
             end else begin
+                axil_resp_next = axil_resp_reg;
                 state_next = STATE_WRITE_RESP;
             end
         end
+        
         STATE_WRITE_DROP: begin
             // write drop state; drop write data
-            s_axil_wready_next[s_select] = 1'b1;
-
+            match = 1'b0;
+            m_select_next = m_select_reg;
+            axil_addr_next = axil_addr_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_data_next = axil_data_reg;
+            axil_wstrb_next = axil_wstrb_reg;
+            axil_resp_next = axil_resp_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = (1 << s_select);
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = 0;
+            m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
+            m_axil_rready_next = 0;
+            
             axil_addr_valid_next = 1'b0;
-
             if (current_s_axil_wready && current_s_axil_wvalid) begin
-                s_axil_wready_next[s_select] = 1'b0;
-                s_axil_bvalid_next[s_select] = 1'b1;
+                s_axil_wready_next = s_axil_wready_next & ~(1 << s_select);
+                s_axil_bvalid_next = s_axil_bvalid_next | (1 << s_select);
                 state_next = STATE_WAIT_IDLE;
             end else begin
                 state_next = STATE_WRITE_DROP;
             end
         end
+        
         STATE_READ: begin
             // read state; store and forward read response
-            m_axil_rready_next[m_select_reg] = 1'b1;
-
+            match = 1'b0;
+            m_select_next = m_select_reg;
+            axil_addr_next = axil_addr_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_wstrb_next = axil_wstrb_reg;
+            axil_resp_next = axil_resp_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = 0;
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = 0;
+            m_axil_rready_next = (1 << m_select_reg);
+            
             if (axil_addr_valid_reg) begin
-                m_axil_arvalid_next[m_select_reg] = 1'b1;
+                m_axil_arvalid_next = (m_axil_arvalid_reg & ~m_axil_arready) | (1 << m_select_reg);
+            end else begin
+                m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
             end
             axil_addr_valid_next = 1'b0;
-
+            
             if (current_m_axil_rready && current_m_axil_rvalid) begin
-                m_axil_rready_next[m_select_reg] = 1'b0;
+                m_axil_rready_next = m_axil_rready_next & ~(1 << m_select_reg);
                 axil_data_next = current_m_axil_rdata;
                 axil_resp_next = current_m_axil_rresp;
-                s_axil_rvalid_next[s_select] = 1'b1;
+                s_axil_rvalid_next = s_axil_rvalid_next | (1 << s_select);
                 state_next = STATE_WAIT_IDLE;
             end else begin
+                axil_data_next = axil_data_reg;
                 state_next = STATE_READ;
             end
         end
+        
         STATE_WAIT_IDLE: begin
-            // wait for idle state; wait untl grant valid is deasserted
-
+            // wait for idle state; wait until grant valid is deasserted
+            match = 1'b0;
+            m_select_next = m_select_reg;
+            axil_addr_next = axil_addr_reg;
+            axil_addr_valid_next = axil_addr_valid_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_data_next = axil_data_reg;
+            axil_wstrb_next = axil_wstrb_reg;
+            axil_resp_next = axil_resp_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = 0;
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = 0;
+            m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
+            m_axil_rready_next = 0;
+            
             if (!grant_valid || acknowledge) begin
                 state_next = STATE_IDLE;
             end else begin
                 state_next = STATE_WAIT_IDLE;
             end
+        end
+        
+        default: begin
+            // Default case to ensure all outputs are assigned
+            state_next = STATE_IDLE;
+            match = 1'b0;
+            m_select_next = m_select_reg;
+            axil_addr_next = axil_addr_reg;
+            axil_addr_valid_next = axil_addr_valid_reg;
+            axil_prot_next = axil_prot_reg;
+            axil_data_next = axil_data_reg;
+            axil_wstrb_next = axil_wstrb_reg;
+            axil_resp_next = axil_resp_reg;
+            s_axil_awready_next = 0;
+            s_axil_wready_next = 0;
+            s_axil_bvalid_next = s_axil_bvalid_reg & ~s_axil_bready;
+            s_axil_arready_next = 0;
+            s_axil_rvalid_next = s_axil_rvalid_reg & ~s_axil_rready;
+            m_axil_awvalid_next = m_axil_awvalid_reg & ~m_axil_awready;
+            m_axil_wvalid_next = m_axil_wvalid_reg & ~m_axil_wready;
+            m_axil_bready_next = 0;
+            m_axil_arvalid_next = m_axil_arvalid_reg & ~m_axil_arready;
+            m_axil_rready_next = 0;
         end
     endcase
 end
