@@ -176,77 +176,119 @@ assign m_axil_arvalid = m_axil_arvalid_reg;
 assign m_axil_rready = m_axil_rready_reg;
 
 always @* begin
-    state_next = STATE_IDLE;
-
-    id_next = id_reg;
-    addr_next = addr_reg;
-    data_next = data_reg;
-    resp_next = resp_reg;
-    burst_next = burst_reg;
-    burst_size_next = burst_size_reg;
-    master_burst_next = master_burst_reg;
-    master_burst_size_next = master_burst_size_reg;
-
-    s_axi_arready_next = 1'b0;
-    s_axi_rid_next = s_axi_rid_reg;
-    s_axi_rdata_next = s_axi_rdata_reg;
-    s_axi_rresp_next = s_axi_rresp_reg;
-    s_axi_rlast_next = s_axi_rlast_reg;
-    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
-    m_axil_araddr_next = m_axil_araddr_reg;
-    m_axil_arprot_next = m_axil_arprot_reg;
-    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
-    m_axil_rready_next = 1'b0;
-
     if (SEGMENT_COUNT == 1) begin
         // master output is same width; direct transfer with no splitting/merging
         case (state_reg)
             STATE_IDLE: begin
                 // idle state; wait for new burst
-                s_axi_arready_next = !m_axil_arvalid;
-
                 if (s_axi_arready && s_axi_arvalid) begin
-                    s_axi_arready_next = 1'b0;
+                    state_next = STATE_DATA;
                     id_next = s_axi_arid;
-                    m_axil_araddr_next = s_axi_araddr;
                     addr_next = s_axi_araddr;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
                     burst_next = s_axi_arlen;
                     burst_size_next = s_axi_arsize;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = s_axi_araddr;
                     m_axil_arprot_next = s_axi_arprot;
                     m_axil_arvalid_next = 1'b1;
                     m_axil_rready_next = 1'b0;
-                    state_next = STATE_DATA;
                 end else begin
                     state_next = STATE_IDLE;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = !m_axil_arvalid;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = 1'b0;
                 end
             end
             STATE_DATA: begin
                 // data state; transfer read data
-                m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
-
                 if (m_axil_rready && m_axil_rvalid) begin
-                    s_axi_rid_next = id_reg;
-                    s_axi_rdata_next = m_axil_rdata;
-                    s_axi_rresp_next = m_axil_rresp;
-                    s_axi_rlast_next = 1'b0;
-                    s_axi_rvalid_next = 1'b1;
-                    burst_next = burst_reg - 1;
-                    addr_next = addr_reg + (1 << burst_size_reg);
                     if (burst_reg == 0) begin
                         // last data word, return to idle
-                        m_axil_rready_next = 1'b0;
-                        s_axi_rlast_next = 1'b1;
-                        s_axi_arready_next = !m_axil_arvalid;
                         state_next = STATE_IDLE;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = data_reg;
+                        resp_next = resp_reg;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = !m_axil_arvalid;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = m_axil_rdata;
+                        s_axi_rresp_next = m_axil_rresp;
+                        s_axi_rlast_next = 1'b1;
+                        s_axi_rvalid_next = 1'b1;
+                        m_axil_araddr_next = m_axil_araddr_reg;
+                        m_axil_arprot_next = m_axil_arprot_reg;
+                        m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                        m_axil_rready_next = 1'b0;
                     end else begin
                         // start new AXI lite read
+                        state_next = STATE_DATA;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = data_reg;
+                        resp_next = resp_reg;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = 1'b0;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = m_axil_rdata;
+                        s_axi_rresp_next = m_axil_rresp;
+                        s_axi_rlast_next = 1'b0;
+                        s_axi_rvalid_next = 1'b1;
                         m_axil_araddr_next = addr_next;
+                        m_axil_arprot_next = m_axil_arprot_reg;
                         m_axil_arvalid_next = 1'b1;
                         m_axil_rready_next = 1'b0;
-                        state_next = STATE_DATA;
                     end
                 end else begin
                     state_next = STATE_DATA;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
                 end
             end
         endcase
@@ -255,15 +297,24 @@ always @* begin
         case (state_reg)
             STATE_IDLE: begin
                 // idle state; wait for new burst
-                s_axi_arready_next = !m_axil_arvalid;
-
                 if (s_axi_arready && s_axi_arvalid) begin
-                    s_axi_arready_next = 1'b0;
                     id_next = s_axi_arid;
-                    m_axil_araddr_next = s_axi_araddr;
                     addr_next = s_axi_araddr;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
                     burst_next = s_axi_arlen;
                     burst_size_next = s_axi_arsize;
+                    master_burst_next = master_burst_reg;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = s_axi_araddr;
+                    m_axil_arprot_next = s_axi_arprot;
+                    m_axil_arvalid_next = 1'b1;
+                    m_axil_rready_next = 1'b0;
                     if (CONVERT_BURST && s_axi_arcache[1] && (CONVERT_NARROW_BURST || s_axi_arsize == AXI_BURST_SIZE)) begin
                         // split reads
                         // require CONVERT_BURST and arcache[1] set
@@ -274,99 +325,265 @@ always @* begin
                         master_burst_size_next = s_axi_arsize;
                         state_next = STATE_DATA;
                     end
-                    m_axil_arprot_next = s_axi_arprot;
-                    m_axil_arvalid_next = 1'b1;
-                    m_axil_rready_next = 1'b0;
                 end else begin
                     state_next = STATE_IDLE;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = !m_axil_arvalid;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = 1'b0;
                 end
             end
             STATE_DATA: begin
-                m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
-
                 if (m_axil_rready && m_axil_rvalid) begin
-                    s_axi_rid_next = id_reg;
-                    s_axi_rdata_next = m_axil_rdata >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
-                    s_axi_rresp_next = m_axil_rresp;
-                    s_axi_rlast_next = 1'b0;
-                    s_axi_rvalid_next = 1'b1;
-                    burst_next = burst_reg - 1;
-                    addr_next = addr_reg + (1 << burst_size_reg);
                     if (burst_reg == 0) begin
                         // last data word, return to idle
-                        m_axil_rready_next = 1'b0;
-                        s_axi_rlast_next = 1'b1;
-                        s_axi_arready_next = !m_axil_arvalid;
                         state_next = STATE_IDLE;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = data_reg;
+                        resp_next = resp_reg;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = !m_axil_arvalid;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = m_axil_rdata >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = m_axil_rresp;
+                        s_axi_rlast_next = 1'b1;
+                        s_axi_rvalid_next = 1'b1;
+                        m_axil_araddr_next = m_axil_araddr_reg;
+                        m_axil_arprot_next = m_axil_arprot_reg;
+                        m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                        m_axil_rready_next = 1'b0;
                     end else begin
                         // start new AXI lite read
+                        state_next = STATE_DATA;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = data_reg;
+                        resp_next = resp_reg;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = 1'b0;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = m_axil_rdata >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = m_axil_rresp;
+                        s_axi_rlast_next = 1'b0;
+                        s_axi_rvalid_next = 1'b1;
                         m_axil_araddr_next = addr_next;
+                        m_axil_arprot_next = m_axil_arprot_reg;
                         m_axil_arvalid_next = 1'b1;
                         m_axil_rready_next = 1'b0;
-                        state_next = STATE_DATA;
                     end
                 end else begin
                     state_next = STATE_DATA;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
                 end
             end
             STATE_DATA_READ: begin
-                m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
-
                 if (m_axil_rready && m_axil_rvalid) begin
-                    s_axi_rid_next = id_reg;
-                    data_next = m_axil_rdata;
-                    resp_next = m_axil_rresp;
-                    s_axi_rdata_next = m_axil_rdata >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
-                    s_axi_rresp_next = m_axil_rresp;
-                    s_axi_rlast_next = 1'b0;
-                    s_axi_rvalid_next = 1'b1;
-                    burst_next = burst_reg - 1;
-                    addr_next = addr_reg + (1 << burst_size_reg);
                     if (burst_reg == 0) begin
-                        m_axil_rready_next = 1'b0;
-                        s_axi_arready_next = !m_axil_arvalid;
-                        s_axi_rlast_next = 1'b1;
                         state_next = STATE_IDLE;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = m_axil_rdata;
+                        resp_next = m_axil_rresp;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = !m_axil_arvalid;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = m_axil_rdata >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = m_axil_rresp;
+                        s_axi_rlast_next = 1'b1;
+                        s_axi_rvalid_next = 1'b1;
+                        m_axil_araddr_next = m_axil_araddr_reg;
+                        m_axil_arprot_next = m_axil_arprot_reg;
+                        m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                        m_axil_rready_next = 1'b0;
                     end else if (addr_next[master_burst_size_reg] != addr_reg[master_burst_size_reg]) begin
                         // start new AXI lite read
+                        state_next = STATE_DATA_READ;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = m_axil_rdata;
+                        resp_next = m_axil_rresp;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = 1'b0;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = m_axil_rdata >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = m_axil_rresp;
+                        s_axi_rlast_next = 1'b0;
+                        s_axi_rvalid_next = 1'b1;
                         m_axil_araddr_next = addr_next;
+                        m_axil_arprot_next = m_axil_arprot_reg;
                         m_axil_arvalid_next = 1'b1;
                         m_axil_rready_next = 1'b0;
-                        state_next = STATE_DATA_READ;
                     end else begin
-                        m_axil_rready_next = 1'b0;
                         state_next = STATE_DATA_SPLIT;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = m_axil_rdata;
+                        resp_next = m_axil_rresp;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = 1'b0;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = m_axil_rdata >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = m_axil_rresp;
+                        s_axi_rlast_next = 1'b0;
+                        s_axi_rvalid_next = 1'b1;
+                        m_axil_araddr_next = m_axil_araddr_reg;
+                        m_axil_arprot_next = m_axil_arprot_reg;
+                        m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                        m_axil_rready_next = 1'b0;
                     end
                 end else begin
                     state_next = STATE_DATA_READ;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
                 end
             end
             STATE_DATA_SPLIT: begin
-                m_axil_rready_next = 1'b0;
-
                 if (s_axi_rready || !s_axi_rvalid) begin
-                    s_axi_rid_next = id_reg;
-                    s_axi_rdata_next = data_reg >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
-                    s_axi_rresp_next = resp_reg;
-                    s_axi_rlast_next = 1'b0;
-                    s_axi_rvalid_next = 1'b1;
-                    burst_next = burst_reg - 1;
-                    addr_next = addr_reg + (1 << burst_size_reg);
                     if (burst_reg == 0) begin
-                        s_axi_arready_next = !m_axil_arvalid;
-                        s_axi_rlast_next = 1'b1;
                         state_next = STATE_IDLE;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = data_reg;
+                        resp_next = resp_reg;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = !m_axil_arvalid;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = data_reg >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = resp_reg;
+                        s_axi_rlast_next = 1'b1;
+                        s_axi_rvalid_next = 1'b1;
+                        m_axil_araddr_next = m_axil_araddr_reg;
+                        m_axil_arprot_next = m_axil_arprot_reg;
+                        m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                        m_axil_rready_next = 1'b0;
                     end else if (addr_next[master_burst_size_reg] != addr_reg[master_burst_size_reg]) begin
                         // start new AXI lite read
+                        state_next = STATE_DATA_READ;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = data_reg;
+                        resp_next = resp_reg;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = 1'b0;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = data_reg >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = resp_reg;
+                        s_axi_rlast_next = 1'b0;
+                        s_axi_rvalid_next = 1'b1;
                         m_axil_araddr_next = addr_next;
+                        m_axil_arprot_next = m_axil_arprot_reg;
                         m_axil_arvalid_next = 1'b1;
                         m_axil_rready_next = 1'b0;
-                        state_next = STATE_DATA_READ;
                     end else begin
                         state_next = STATE_DATA_SPLIT;
+                        id_next = id_reg;
+                        addr_next = addr_reg + (1 << burst_size_reg);
+                        data_next = data_reg;
+                        resp_next = resp_reg;
+                        burst_next = burst_reg - 1;
+                        burst_size_next = burst_size_reg;
+                        master_burst_next = master_burst_reg;
+                        master_burst_size_next = master_burst_size_reg;
+                        s_axi_arready_next = 1'b0;
+                        s_axi_rid_next = id_reg;
+                        s_axi_rdata_next = data_reg >> (addr_reg[AXI_ADDR_BIT_OFFSET:AXIL_ADDR_BIT_OFFSET-1] * AXI_DATA_WIDTH);
+                        s_axi_rresp_next = resp_reg;
+                        s_axi_rlast_next = 1'b0;
+                        s_axi_rvalid_next = 1'b1;
+                        m_axil_araddr_next = m_axil_araddr_reg;
+                        m_axil_arprot_next = m_axil_arprot_reg;
+                        m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                        m_axil_rready_next = 1'b0;
                     end
                 end else begin
                     state_next = STATE_DATA_SPLIT;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = 1'b0;
                 end
             end
         endcase
@@ -375,17 +592,24 @@ always @* begin
         case (state_reg)
             STATE_IDLE: begin
                 // idle state; wait for new burst
-                s_axi_arready_next = !m_axil_arvalid;
-
-                resp_next = 2'd0;
-
                 if (s_axi_arready && s_axi_arvalid) begin
-                    s_axi_arready_next = 1'b0;
+                    state_next = STATE_DATA;
                     id_next = s_axi_arid;
-                    m_axil_araddr_next = s_axi_araddr;
                     addr_next = s_axi_araddr;
+                    data_next = data_reg;
+                    resp_next = 2'd0;
                     burst_next = s_axi_arlen;
                     burst_size_next = s_axi_arsize;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = s_axi_araddr;
+                    m_axil_arprot_next = s_axi_arprot;
+                    m_axil_arvalid_next = 1'b1;
+                    m_axil_rready_next = 1'b0;
                     if (s_axi_arsize > AXIL_BURST_SIZE) begin
                         // need to adjust burst size
                         if (s_axi_arlen >> (8+AXIL_BURST_SIZE-s_axi_arsize) != 0) begin
@@ -400,34 +624,113 @@ always @* begin
                         master_burst_next = s_axi_arlen;
                         master_burst_size_next = s_axi_arsize;
                     end
-                    m_axil_arprot_next = s_axi_arprot;
-                    m_axil_arvalid_next = 1'b1;
-                    m_axil_rready_next = 1'b0;
-                    state_next = STATE_DATA;
                 end else begin
                     state_next = STATE_IDLE;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = !m_axil_arvalid;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = 1'b0;
                 end
             end
             STATE_DATA: begin
-                m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
-
                 if (m_axil_rready && m_axil_rvalid) begin
-                    data_next[addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH +: SEGMENT_DATA_WIDTH] = m_axil_rdata;
                     if (m_axil_rresp) begin
                         resp_next = m_axil_rresp;
+                    end else begin
+                        resp_next = resp_reg;
                     end
-                    s_axi_rid_next = id_reg;
-                    s_axi_rdata_next = data_next;
-                    s_axi_rresp_next = resp_next;
-                    s_axi_rlast_next = 1'b0;
-                    s_axi_rvalid_next = 1'b0;
-                    master_burst_next = master_burst_reg - 1;
+                    id_next = id_reg;
                     addr_next = (addr_reg + (1 << master_burst_size_reg)) & ({ADDR_WIDTH{1'b1}} << master_burst_size_reg);
+                    burst_size_next = burst_size_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_rid_next = id_reg;
+                    s_axi_rresp_next = resp_next;
                     m_axil_araddr_next = addr_next;
-                    if (addr_next[burst_size_reg] != addr_reg[burst_size_reg]) begin
-                        data_next = {DATA_WIDTH{1'b0}};
-                        burst_next = burst_reg - 1;
-                        s_axi_rvalid_next = 1'b1;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_rready_next = 1'b0;
+                    
+                    if (master_burst_reg == 0) begin
+                        if (burst_reg == 0) begin
+                            state_next = STATE_IDLE;
+                            s_axi_arready_next = !m_axil_arvalid;
+                            s_axi_rlast_next = 1'b1;
+                            s_axi_rvalid_next = 1'b1;
+                            m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                            if (addr_next[burst_size_reg] != addr_reg[burst_size_reg]) begin
+                                data_next = {DATA_WIDTH{1'b0}};
+                                s_axi_rdata_next = (data_reg & ~({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, {SEGMENT_DATA_WIDTH{1'b1}}} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH))) |
+                                                  ({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, m_axil_rdata} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH));
+                                burst_next = burst_reg - 1;
+                            end else begin
+                                data_next = (data_reg & ~({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, {SEGMENT_DATA_WIDTH{1'b1}}} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH))) |
+                                           ({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, m_axil_rdata} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH));
+                                s_axi_rdata_next = data_next;
+                                burst_next = burst_reg;
+                            end
+                            if (burst_next >> (8+AXIL_BURST_SIZE-burst_size_reg) != 0) begin
+                                master_burst_next = 8'd255;
+                            end else begin
+                                master_burst_next = (burst_next << (burst_size_reg-AXIL_BURST_SIZE)) | (8'hff >> (8-burst_size_reg) >> AXIL_BURST_SIZE);
+                            end
+                        end else begin
+                            state_next = STATE_DATA;
+                            s_axi_arready_next = 1'b0;
+                            m_axil_arvalid_next = 1'b1;
+                            if (addr_next[burst_size_reg] != addr_reg[burst_size_reg]) begin
+                                data_next = {DATA_WIDTH{1'b0}};
+                                s_axi_rdata_next = (data_reg & ~({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, {SEGMENT_DATA_WIDTH{1'b1}}} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH))) |
+                                                  ({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, m_axil_rdata} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH));
+                                burst_next = burst_reg - 1;
+                                s_axi_rlast_next = 1'b0;
+                                s_axi_rvalid_next = 1'b1;
+                            end else begin
+                                data_next = (data_reg & ~({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, {SEGMENT_DATA_WIDTH{1'b1}}} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH))) |
+                                           ({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, m_axil_rdata} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH));
+                                s_axi_rdata_next = data_next;
+                                burst_next = burst_reg;
+                                s_axi_rlast_next = 1'b0;
+                                s_axi_rvalid_next = 1'b0;
+                            end
+                            if (burst_next >> (8+AXIL_BURST_SIZE-burst_size_reg) != 0) begin
+                                master_burst_next = 8'd255;
+                            end else begin
+                                master_burst_next = (burst_next << (burst_size_reg-AXIL_BURST_SIZE)) | (8'hff >> (8-burst_size_reg) >> AXIL_BURST_SIZE);
+                            end
+                        end
+                    end else begin
+                        state_next = STATE_DATA;
+                        s_axi_arready_next = 1'b0;
+                        m_axil_arvalid_next = 1'b1;
+                        master_burst_next = master_burst_reg - 1;
+                        if (addr_next[burst_size_reg] != addr_reg[burst_size_reg]) begin
+                            data_next = {DATA_WIDTH{1'b0}};
+                            s_axi_rdata_next = (data_reg & ~({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, {SEGMENT_DATA_WIDTH{1'b1}}} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH))) |
+                                              ({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, m_axil_rdata} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH));
+                            burst_next = burst_reg - 1;
+                            s_axi_rlast_next = 1'b0;
+                            s_axi_rvalid_next = 1'b1;
+                        end else begin
+                            data_next = (data_reg & ~({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, {SEGMENT_DATA_WIDTH{1'b1}}} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH))) |
+                                       ({{DATA_WIDTH-SEGMENT_DATA_WIDTH{1'b0}}, m_axil_rdata} << (addr_reg[AXIL_ADDR_BIT_OFFSET:AXI_ADDR_BIT_OFFSET-1]*SEGMENT_DATA_WIDTH));
+                            s_axi_rdata_next = data_next;
+                            burst_next = burst_reg;
+                            s_axi_rlast_next = 1'b0;
+                            s_axi_rvalid_next = 1'b0;
+                        end
                     end
                     if (master_burst_reg == 0) begin
                         if (burst_next >> (8+AXIL_BURST_SIZE-burst_size_reg) != 0) begin
@@ -436,25 +739,40 @@ always @* begin
                         end else begin
                             master_burst_next = (burst_next << (burst_size_reg-AXIL_BURST_SIZE)) | (8'hff >> (8-burst_size_reg) >> AXIL_BURST_SIZE);
                         end
-
                         if (burst_reg == 0) begin
-                            m_axil_rready_next = 1'b0;
+                            state_next = STATE_IDLE;
                             s_axi_rlast_next = 1'b1;
                             s_axi_rvalid_next = 1'b1;
                             s_axi_arready_next = !m_axil_arvalid;
-                            state_next = STATE_IDLE;
+                            m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
                         end else begin
-                            m_axil_arvalid_next = 1'b1;
-                            m_axil_rready_next = 1'b0;
                             state_next = STATE_DATA;
+                            m_axil_arvalid_next = 1'b1;
                         end
                     end else begin
-                        m_axil_arvalid_next = 1'b1;
-                        m_axil_rready_next = 1'b0;
                         state_next = STATE_DATA;
+                        m_axil_arvalid_next = 1'b1;
                     end
                 end else begin
                     state_next = STATE_DATA;
+                    id_next = id_reg;
+                    addr_next = addr_reg;
+                    data_next = data_reg;
+                    resp_next = resp_reg;
+                    burst_next = burst_reg;
+                    burst_size_next = burst_size_reg;
+                    master_burst_next = master_burst_reg;
+                    master_burst_size_next = master_burst_size_reg;
+                    s_axi_arready_next = 1'b0;
+                    s_axi_rid_next = s_axi_rid_reg;
+                    s_axi_rdata_next = s_axi_rdata_reg;
+                    s_axi_rresp_next = s_axi_rresp_reg;
+                    s_axi_rlast_next = s_axi_rlast_reg;
+                    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+                    m_axil_araddr_next = m_axil_araddr_reg;
+                    m_axil_arprot_next = m_axil_arprot_reg;
+                    m_axil_arvalid_next = m_axil_arvalid_reg && !m_axil_arready;
+                    m_axil_rready_next = !s_axi_rvalid && !m_axil_arvalid;
                 end
             end
         endcase
